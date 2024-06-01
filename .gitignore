@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.env
+*.venv
+*.pyc
+*.pkl
+*.pickle
+*.npy
+
+# Neuroimaging
+*.nii
+*.nii.gz
+*.gii
+
+# Logs
+*.log
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# Other
+*.pdf
+*.csv
+*.tar.gz
+*.txt
+
+
+# Folders
+tmp/
+preparation/
+data/old/
+data/tmp/
+data/atl-schaefer2018
+data/microarray/
+data/rnaseq/
+results/GO/
+results/fasta/
+results/old/
+results/tmp/
