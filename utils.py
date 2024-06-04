@@ -1,9 +1,10 @@
 import itertools
-
 import brainconn as bc
 import numpy as np
+import pandas as pd
 import scipy
 from tqdm import tqdm
+
 
 
 def navigation_wu(nav_dist_mat, sc_mat, show_progress=True):
@@ -167,3 +168,29 @@ def communicability_wei(adjacency):
     cmc[np.diag_indices_from(cmc)] = 0
 
     return cmc
+
+
+def index_structure(df, structure='CTX-SBCTX'):
+    """
+    Indexes the dataframe by the specified structure for parcellated data with
+    the combined Schaefer 400 + Tian S4 + HTH atlas
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Dataframe to be indexed
+    structure : str
+        Structure to index by. Can be CTX, SBCTX, CTX-SBCTX
+    Returns
+    -------
+    indexed_df : pandas.DataFrame
+        Dataframe indexed by the specified structure
+    """
+    if structure == 'CTX':
+        indexed_df = df.iloc[54:-1]
+    elif structure == 'SBCTX':
+        indexed_df = df.iloc[:54]
+    elif structure == 'CTX-SBCTX':
+        indexed_df = df.iloc[:-1]
+    else:
+        raise ValueError('Invalid structure. Must be CTX, SBCTX, or CTX-SBCTX')
+    return indexed_df
