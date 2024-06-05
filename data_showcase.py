@@ -1,35 +1,21 @@
 # %%
-import re
-from turtle import color
 import pandas as pd
 import numpy as np
 import abagen as abg
 import seaborn as sns
 import matplotlib.pyplot as plt
+from utils import index_structure
+from plot_utils import divergent_green_orange
 
 # load structural and functional connectivity
-sc = np.load('data/template_parc-Schaefer400_desc-SC.npy')
-fc = np.load('data/template_parc-Schaefer400_desc-FC.npy')
+sc = np.load('data/template_parc-Schaefer400_TianS4_desc-SC.npy')
+fc = np.load('data/template_parc-Schaefer400_TianS4_desc-FC.npy')
 
 # load genes and gene list
-all_genes = pd.read_csv('data/abagen_genes_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0)
-gene_list = pd.read_csv('data/gene_list.csv')
-
-# find overlapping genes in genes columns and gene_list
-overlapping_genes = gene_list[gene_list['Gene'].isin(all_genes.columns)]['Gene']
-
-# select overlapping genes from genes and gene_list
-genes = all_genes[overlapping_genes]
-gene_list = gene_list[gene_list['Gene'].isin(overlapping_genes)]
-
-receptor_labels = gene_list[gene_list['Description'].str.contains('receptor')]
-receptor_labels = receptor_labels.append({'Gene': 'SORT1'}, ignore_index=True)
-peptide_labels = gene_list[~gene_list['Gene'].isin(receptor_labels['Gene'])]
-receptor_genes = all_genes[receptor_labels['Gene']]
+receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0)
 
 nrois = len(receptor_genes)
 triu_indices = np.triu_indices(nrois, k=1)
-
 
 # %% RAW DATA PLOT
 
@@ -43,7 +29,7 @@ family_color_map = {family: color for family, color in zip(families, family_colo
 
 # plot genes in clustermap
 # show all column ticklabels
-ax = sns.clustermap(receptor_genes, cmap='coolwarm', col_cluster=True, row_cluster=False, 
+ax = sns.clustermap(receptor_genes, cmap=divergent_green_orange(), col_cluster=True, row_cluster=False, 
                     xticklabels=True, cbar_kws={'label': 'gene expression'},
                     figsize=(14, 10))
 
@@ -62,8 +48,8 @@ for i, label in enumerate(ax.ax_heatmap.get_xticklabels()):
 # create SC nulls
 n_nulls = 1000
 
-if os.path.exists('data/sc_nulls_Schaefer400.npy'):
-    sc_nulls = np.load('data/sc_nulls_Schaefer400.npy')
+if os.path.exists('data/sc_nulls_Schaefer400_TianS4.npy'):
+    sc_nulls = np.load('data/sc_nulls_Schaefer400_TianS4.npy')
 else:
     nulls = Parallel(n_jobs=20) \
             (delayed(strength_preserving_rand_sa)(sc, seed=i) 
@@ -73,7 +59,7 @@ else:
     for null in nulls:
         sc_nulls.append(null[0])
     sc_nulls = np.array(sc_nulls)
-    np.save('data/sc_nulls_Schaefer400.npy', sc_nulls)
+    np.save('data/sc_nulls_Schaefer400_TianS4.npy', sc_nulls)
 
 
 # %% Structural connectivity
