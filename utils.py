@@ -1,13 +1,10 @@
 import itertools
-import brainconn as bc
 import numpy as np
 import pandas as pd
 import scipy
-from tqdm import tqdm
-
-
 
 def navigation_wu(nav_dist_mat, sc_mat, show_progress=True):
+    from tqdm import tqdm
     nav_paths = []  # (source, target, distance, hops, path)
     for src in tqdm(range(len(nav_dist_mat)), disable=not show_progress):
         for tar in range(len(nav_dist_mat)):
@@ -59,6 +56,7 @@ def navigation_wu(nav_dist_mat, sc_mat, show_progress=True):
 
 
 def search_information(W, L, has_memory=False):
+    import brainconn as bc
     N = len(W)
 
     if np.allclose(W, W.T):
