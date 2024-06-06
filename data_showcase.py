@@ -6,21 +6,22 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from utils import index_structure
 from plot_utils import divergent_green_orange
+from netneurotools.networks import strength_preserving_rand_sa
+from joblib import Parallel, delayed
 
 # load structural and functional connectivity
-sc = np.load('data/template_parc-Schaefer400_TianS4_desc-SC.npy')
+sc = np.load('data/template_parc-Schaefer400_TianS4_desc-SC_wei.npy')
 fc = np.load('data/template_parc-Schaefer400_TianS4_desc-FC.npy')
 
 # load genes and gene list
 receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0)
+receptor_genes = index_structure(receptor_genes, structure='CTX-SBCTX')
+receptor_list = pd.read_csv('data/receptor_list.csv')
 
 nrois = len(receptor_genes)
 triu_indices = np.triu_indices(nrois, k=1)
 
 # %% RAW DATA PLOT
-
-# load receptor list
-receptor_list = pd.read_csv('data/receptor_list.csv')
 
 # crate family-wise color map
 families = receptor_list['Family'].unique()
@@ -47,6 +48,9 @@ for i, label in enumerate(ax.ax_heatmap.get_xticklabels()):
 
 # create SC nulls
 n_nulls = 1000
+
+# make sure SC matrix is symmetric
+sc = np.maximum(sc, sc.T)
 
 if os.path.exists('data/sc_nulls_Schaefer400_TianS4.npy'):
     sc_nulls = np.load('data/sc_nulls_Schaefer400_TianS4.npy')
