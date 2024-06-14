@@ -157,34 +157,6 @@ def gene_null_set(gene_set, non_overlapping_set, distance, null_set_size=100, n_
     null_set = Parallel(n_jobs=n_jobs,)(delayed(get_gene_null)(gene_set, moran_i, non_overlapping_set, distance, 
                                                               null_set_size=null_set_size, seed=i)
                                       for i in range(n_permutations))
-
-
-    # # sample genes from non_overlapping_set
-    # null_set = []
-    # for _ in range(n_permutations):
-    #     # sample genes
-    #     random_genes = non_overlapping_set.sample(n=null_set_size, axis=1, random_state=rng.integers(0, 2**32-1))
-    #     # get the spatial autocorrelation of each gene in the random gene set
-    #     random_mi_values = []
-    #     random_ks_values = []
-    #     for _, random_gene in random_genes.items():
-    #         random_mi_values.append(morans_i(distance, random_gene.values))
-    #         random_ks_values.append([ks_2samp(gene, random_gene.values).statistic for _, gene in gene_set.items()])
-    #     random_mi_values = np.array(random_mi_values)
-    #     random_ks_values = np.array(random_ks_values)
-
-    #     # for each gene in gene_set, calculate which moran_i is most similar among the random genes
-    #     comparison_mi = [np.abs(moran_i - random_mi_values[i]) for i in range(null_set_size)]
-    #     rank_mi = np.argsort(comparison_mi, axis=0)
-
-    #     # get the value distribution of each gene in the gene set
-    #     rank_ks = np.argsort(random_ks_values, axis=0)  
-
-    #     # select the gene with the highest average rank
-    #     rank = (rank_mi + rank_ks) / 2
-    #     indices = np.argmin(rank, axis=0)
-    #     selected_genes = random_genes.iloc[:, indices]
-    #     null_set.append(selected_genes.values)
         
     return null_set
     
