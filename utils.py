@@ -190,7 +190,6 @@ def gene_null_set(gene_set, non_overlapping_set, distance, null_set_size=100, n_
     
 
 
-
 def navigation_wu(nav_dist_mat, sc_mat, show_progress=True):
     from tqdm import tqdm
     nav_paths = []  # (source, target, distance, hops, path)
