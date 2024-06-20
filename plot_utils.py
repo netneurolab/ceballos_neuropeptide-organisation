@@ -350,3 +350,89 @@ def schaefer_cmap(include_nota=False):
                         (218, 24, 24)  # Default
                         ]) / 255
     return mpc.LinearSegmentedColormap.from_list('custom', rgb, N=len(rgb))
+
+
+def split_barplot(df, x=None, y=None, top=None, equal_scale=False, figsize=(6, 10), dpi=100, 
+                  colors=['#308675', '#f8794b']):
+    """
+    Create two barplots from a DataFrame, one for positive and one for negative values.
+    
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The DataFrame containing the data to plot.
+    x : str
+        The name of the column containing the x-axis data. Default is None.
+    y : str
+        The name of the column containing the y-axis data. Default is None.
+    top : int
+        The number of top values to plot. Default is None.
+    equal_scale : bool
+        Whether to use the number of yticks for both barplots. Default is False.
+    figsize : tuple
+        The size of the figure.
+    dpi : int
+        The resolution of the figure.
+    colors : list
+        The colors to use for the negative and positive loadings.
+    """
+
+    # If dataframe does not contain column 'err' define with 0
+    if 'err' not in df.columns:
+        df['err'] = np.zeros(len(df))
+
+    # Split data into positive and negative loadings
+    negative_df = df[df[x] < 0].reset_index()
+    positive_df = df[df[x] > 0].reset_index()
+
+    # Sort dataframes by x-axis values
+    negative_df = negative_df.sort_values(x, ascending=True)
+    positive_df = positive_df.sort_values(x, ascending=False)
+
+    # If top is given, only plot the top n values
+    if isinstance(top, int):
+        negative_df = negative_df.head(top)
+        positive_df = positive_df.head(top)
+
+    # Find the maximum absolute value in the original dataframe for x-axis scaling
+    max_abs_index = df[x].abs().idxmax()
+    max_err = df.at[max_abs_index, 'err']
+    max_err = max_err + df.at[max_abs_index, x] * 0.02 # small value to have space between axis and bars
+    axes_lim = np.abs(df.at[max_abs_index, x]) + max_err
+    
+    # If equal_scale is True, ensure both dataframes have the same number of entries for plotting
+    if equal_scale:
+        max_length = max(len(positive_df), len(negative_df))
+        negative_df = negative_df.reindex(range(max_length), fill_value=np.nan)
+        positive_df = positive_df.reindex(range(max_length), fill_value=np.nan)
+
+        # Resort dataframes by x-axis values
+        negative_df = negative_df.sort_values(x, ascending=True)
+        positive_df = positive_df.sort_values(x, ascending=False)
+        
+        # Error values for the barplot
+        negative_err = negative_df.dropna()['err'].values
+        positive_err = positive_df.dropna()['err'].values
+    else:
+        # Error values for the barplot
+        negative_err = negative_df['err'].values
+        positive_err = positive_df['err'].values
+
+    # Plotting
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=figsize, dpi=dpi)
+
+    # Negative barplot
+    sns.barplot(ax=axes[0], x=x, y=y, data=negative_df, xerr=negative_err, color=colors[0], 
+                dodge=True, error_kw=dict(ecolor='black', lw=1, capsize=1, capthick=1, alpha=0.7))
+    axes[0].set_xlim(-axes_lim, 0)
+
+    # Positive barplot
+    sns.barplot(ax=axes[1], x=x, y=y, data=positive_df, xerr=positive_err, color=colors[1], 
+                dodge=True, error_kw=dict(ecolor='black', lw=1, capsize=1, capthick=1, alpha=0.7))
+    axes[1].set_xlim(0, axes_lim)
+
+    # Set ytick labels for the positive subplot on the right side
+    axes[1].yaxis.tick_right()
+    axes[1].yaxis.set_label_position("right")
+
+    return fig, axes
