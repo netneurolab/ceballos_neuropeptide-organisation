@@ -1,4 +1,6 @@
-# %% 
+########################################################################################
+# %% PLOT RAW DATA
+########################################################################################
 import pandas as pd
 import numpy as np
 from utils import index_structure
@@ -103,4 +105,51 @@ receptor_genes = pd.concat([left, right])
 # %%
 plot_subcortical(receptor_genes['NPY2R'].values, ventricles=True, transparent_bg=True, size=(1200, 800), 
                  interactive=True, embed_nb=False, cmap='green_orange', color_range=(0, 1))
+
+########################################################################################
+# %% PLOT PLS SCORES
+########################################################################################
+from surfplot import Plot
+from neuromaps.datasets import fetch_fslr
+from brainspace.datasets import load_parcellation
+from utils import index_structure
+from plot_utils import divergent_green_orange
+
+# turn pls scores into dataframe for plotting
+plot_df =  pd.read_csv('results/pls_scores_Schaefer400_TianS4_HTH.csv')
+plot_data = index_structure(plot_df, structure='CTX')
+
 # %%
+# load surface and parcellation
+surfaces = fetch_fslr()
+lh, rh = surfaces['inflated']
+atlas = load_parcellation('schaefer', 400)
+atlas = atlas[0] # only left hemisphere
+regions = np.unique(atlas)[1:] # discard 0
+atlas_values = atlas.copy()
+
+# cognitive scores
+for roi in regions:
+    roi_value = plot_data['cognitive'].values[roi]
+    layer_data = np.where(atlas==roi, roi_value, atlas_values)
+
+p = Plot(lh, views=['lateral','medial'], zoom=1.2, size=(1200, 800), dpi=200, brightness=0.6)
+p.add_layer(layer_data, cmap=divergent_green_orange(), tick_labels=['min', 'max'], cbar_label='Cognitive scores')
+
+if savefigs:
+    p.build(dpi=300, save_as=f'figures/cognitive_scores_brainmap.pdf');
+else:
+    p.build(dpi=300);
+
+# receptor scores
+for roi in regions:
+    roi_value = plot_data['receptor'].values[roi]
+    layer_data = np.where(atlas==roi, roi_value, atlas_values)
+
+p = Plot(lh, views=['lateral','medial'], zoom=1.2, size=(1200, 800), dpi=200, brightness=0.6)
+p.add_layer(layer_data, cmap=divergent_green_orange(), tick_labels=['min', 'max'], cbar_label='Receptor scores')
+
+if savefigs:
+    p.build(dpi=300, save_as=f'figures/receptor_scores_brainmap.pdf');
+else:
+    p.build(dpi=300);
