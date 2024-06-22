@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.colors as mpc
-from matplotlib.cm import ColormapRegistry
+from matplotlib.transforms import ScaledTranslation
 from nilearn.plotting import plot_surf
 from neuromaps.datasets import fetch_atlas
 from neuromaps.parcellate import Parcellater
@@ -367,8 +367,8 @@ def split_barplot(df, x=None, y=None, top=None, equal_scale=False, figsize=(6, 1
         The name of the column containing the y-axis data. Default is None.
     top : int
         The number of top values to plot. Default is None.
-    equal_scale : bool
-        Whether to use the number of yticks for both barplots. Default is False.
+    equal_scale : bool (experimental)
+        Whether to use the same number of yticks for both barplots. Default is False.
     figsize : tuple
         The size of the figure.
     dpi : int
@@ -384,55 +384,90 @@ def split_barplot(df, x=None, y=None, top=None, equal_scale=False, figsize=(6, 1
     # Split data into positive and negative loadings
     negative_df = df[df[x] < 0].reset_index()
     positive_df = df[df[x] > 0].reset_index()
-
-    # Sort dataframes by x-axis values
+    
     negative_df = negative_df.sort_values(x, ascending=True)
     positive_df = positive_df.sort_values(x, ascending=False)
 
     # If top is given, only plot the top n values
-    if isinstance(top, int):
+    if isinstance(top, int):        
         negative_df = negative_df.head(top)
         positive_df = positive_df.head(top)
+        
+        # if equal_scale is True raise error
+        if equal_scale:
+            raise ValueError("Cannot use 'top' and 'equal_scale' together.")
 
     # Find the maximum absolute value in the original dataframe for x-axis scaling
     max_abs_index = df[x].abs().idxmax()
+    max_value = np.abs(df.at[max_abs_index, x])
     max_err = df.at[max_abs_index, 'err']
-    max_err = max_err + df.at[max_abs_index, x] * 0.02 # small value to have space between axis and bars
-    axes_lim = np.abs(df.at[max_abs_index, x]) + max_err
-    
-    # If equal_scale is True, ensure both dataframes have the same number of entries for plotting
-    if equal_scale:
-        max_length = max(len(positive_df), len(negative_df))
-        negative_df = negative_df.reindex(range(max_length), fill_value=np.nan)
-        positive_df = positive_df.reindex(range(max_length), fill_value=np.nan)
+    # Add small value to have space between axis and bars
+    max_err = max_err + max_value * 0.02 
+    axes_lim = max_value + max_err
 
-        # Resort dataframes by x-axis values
-        negative_df = negative_df.sort_values(x, ascending=True)
-        positive_df = positive_df.sort_values(x, ascending=False)
-        
-        # Error values for the barplot
-        negative_err = negative_df.dropna()['err'].values
-        positive_err = positive_df.dropna()['err'].values
-    else:
-        # Error values for the barplot
-        negative_err = negative_df['err'].values
-        positive_err = positive_df['err'].values
+    # Error values for the barplot
+    negative_err = negative_df['err'].values
+    positive_err = positive_df['err'].values
 
     # Plotting
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=figsize, dpi=dpi)
 
     # Negative barplot
     sns.barplot(ax=axes[0], x=x, y=y, data=negative_df, xerr=negative_err, color=colors[0], 
-                dodge=True, error_kw=dict(ecolor='black', lw=1, capsize=1, capthick=1, alpha=0.7))
+                error_kw=dict(ecolor='black', lw=1, capsize=1, capthick=1, alpha=0.7))
     axes[0].set_xlim(-axes_lim, 0)
 
     # Positive barplot
     sns.barplot(ax=axes[1], x=x, y=y, data=positive_df, xerr=positive_err, color=colors[1], 
-                dodge=True, error_kw=dict(ecolor='black', lw=1, capsize=1, capthick=1, alpha=0.7))
+                error_kw=dict(ecolor='black', lw=1, capsize=1, capthick=1, alpha=0.7))
     axes[1].set_xlim(0, axes_lim)
 
     # Set ytick labels for the positive subplot on the right side
     axes[1].yaxis.tick_right()
     axes[1].yaxis.set_label_position("right")
+
+    if equal_scale:
+        # TODO: Fix y-axis labels. Right now using ScaledTranslation to move labels, but a fixed offset would be better.
+        #       Simply calling set_yticks on both axes does not work
+        max_yticks = max(len(negative_df), len(positive_df))
+        more_neg = len(negative_df) > len(positive_df)
+        
+        if more_neg:
+            # turn autoscale for right axis off
+            axes[1].autoscale(False)
+            # set ytick majors are at same positions as left axis
+            yticklabels = positive_df[y].tolist() + [''] * (max_yticks - len(positive_df))
+            axes[1].set_yticks(axes[0].get_yticks() + 0.5,
+                               labels=yticklabels)
+            # turn yticks off
+            axes[0].tick_params(axis='y', which='both', left=False, right=False)
+            axes[1].tick_params(axis='y', which='both', left=False, right=False)
+            
+            # move labels back to their position
+            for label in axes[1].get_yticklabels():
+                label.set_transform(label.get_transform() + 
+                                    ScaledTranslation(0, 0.1, axes[1].figure.dpi_scale_trans))
+                        
+            # OLD APPROACH
+            # axes[1].sharey(axes[0])
+            # g = axes[1].get_shared_y_axes();
+            # g.remove(g.get_siblings(axes[1])[0])
+            # axes[0].set_yticklabels(negative_df[y].tolist())
+            # axes[1].set_yticklabels(positive_df[y].tolist() + [''] * (max_yticks - len(positive_df)))
+        else:
+            # turn autoscale for right axis off
+            axes[0].autoscale(False)
+            # set ytick majors are at same positions as left axis
+            yticklabels = negative_df[y].tolist() + [''] * (max_yticks - len(negative_df))
+            axes[0].set_yticks(axes[1].get_yticks() + 0.5,
+                               labels=yticklabels)
+            # turn yticks off
+            axes[0].tick_params(axis='y', which='both', left=False, right=False)
+            axes[1].tick_params(axis='y', which='both', left=False, right=False)
+            
+            # move labels back to their position
+            for label in axes[0].get_yticklabels():
+                label.set_transform(label.get_transform() + 
+                                    ScaledTranslation(0, 0.1, axes[0].figure.dpi_scale_trans))          
 
     return fig, axes
