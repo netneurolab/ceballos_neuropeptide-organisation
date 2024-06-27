@@ -23,7 +23,8 @@ receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_
 
 # Load colors
 palette = divergent_green_orange(n_colors=9, return_palette=True)
-colors = [palette[1], palette[-2]]
+bipolar = [palette[1], palette[-2]]
+spectral = [color for i, color in enumerate(sns.color_palette('Spectral')) if i in [1,2,4]]
 
 # %% Gene null sets
 nperm = 10000
@@ -52,6 +53,8 @@ else:
 # Define X and Y
 X = zscore(ns.values, ddof=1)
 Y = zscore(receptor_genes.values, ddof=1)
+nlv = len(X.T) if len(X.T) < len(Y.T) else len(Y.T) # number of latent variables
+lv = 0  # interested only in first latent variable
 
 pls_result_fn = 'results/pls_result_Schaefer400_TianS4_HTH.npy'
 if os.path.exists(pls_result_fn):
@@ -63,9 +66,6 @@ else:
     np.save(pls_result_fn, pls_result)
 
 # check significance
-nlv = len(X.T) if len(X.T) < len(Y.T) else len(Y.T) # number of latent variables
-lv = 0  # interest only in first latent variable
-
 cv = pls_result["singvals"]**2 / np.sum(pls_result["singvals"]**2)
 null_singvals = pls_result['permres']['perm_singval']
 cv_spins = null_singvals**2 / sum(null_singvals**2)
@@ -85,6 +85,7 @@ if savefigs:
 # Switch X and Y
 X = zscore(receptor_genes.values, ddof=1)
 Y = zscore(ns.values, ddof=1)
+nlv = len(X.T) if len(X.T) < len(Y.T) else len(Y.T) # number of latent variables
 
 pls_result_X_fn = 'results/pls_result_X_Schaefer400_TianS4_HTH.pickle'
 if os.path.exists(pls_result_X_fn):
@@ -101,23 +102,35 @@ else:
         pickle.dump(pls_result_X, f, protocol=4)
 
 # check significance
-nlv = len(X.T) if len(X.T) < len(Y.T) else len(Y.T) # number of latent variables
-lv = 0  # interest only in first latent variable
+cv_X = pls_result_X["singvals"]**2 / np.sum(pls_result_X["singvals"]**2)
+null_singvals_X = pls_result_X['permres']['perm_singval']
+cv_spins_X = null_singvals_X**2 / sum(null_singvals_X**2)
+p_X = (1+sum(null_singvals_X[lv, :] > pls_result_X["singvals"][lv]))/(1+nperm)
 
-cv = pls_result_X["singvals"]**2 / np.sum(pls_result_X["singvals"]**2)
-null_singvals = pls_result_X['permres']['perm_singval']
-cv_spins = null_singvals**2 / sum(null_singvals**2)
-p = (1+sum(null_singvals[lv, :] > pls_result_X["singvals"][lv]))/(1+nperm)
-
-print("p-value: {:.4f}".format(p))
+print(f"p-value: {p_X:.4f}")
 
 # %% plot scores
-xscore = pls_result["x_scores"][:, lv]
-yscore = pls_result["y_scores"][:, lv]
+scores_fn = 'results/pls_scores_Schaefer400_TianS4_HTH.csv'
 
-# show linear fit with no CI
-sns.regplot(x=xscore, y=yscore, color=colors[0], scatter_kws={'alpha': 0.5}, ci=None)
+if os.path.exists(scores_fn):
+    scores = pd.read_csv(scores_fn)
+else:
+    xscore = pls_result["x_scores"][:, lv]
+    yscore = pls_result["y_scores"][:, lv]
+    scores = pd.DataFrame({'networks': receptor_genes.index,
+                           'receptor': xscore, 
+                           'cognitive': yscore})
+
+atlas_info = pd.read_csv('data/parcellations/Schaefer2018_400_7N_Tian_Subcortex_S4_LUT.csv', index_col=0)
+atlas_info['network'].iloc[-1] = 'Hypothalamus'
+atlas_info['network'] = np.where(atlas_info['structure'] == 'cortex', 'Cortex', atlas_info['network'])
+scores['network'] = atlas_info['network']
+
+sns.regplot(data=scores, x='receptor', y='cognitive', color='black', scatter_kws={'s': 0}, ci=None)
+sns.scatterplot(data=scores, x='receptor', y='cognitive', hue='network', palette=spectral,
+                hue_order=['Cortex', 'Hypothalamus', 'Subcortex'], s=50)
 sns.despine()
+plt.legend(frameon=False, title='Network')
 plt.xlabel('Receptor scores')
 plt.ylabel('Cognitive scores')
 if savefigs:
@@ -142,7 +155,7 @@ if savefigs:
 
 # # Plot altogether
 # plt.figure(figsize=(6,8))
-# sns.barplot(x='loading', y='receptor', data=receptors_df, xerr=err, hue='sign', dodge=True, palette=colors)
+# sns.barplot(x='loading', y='receptor', data=receptors_df, xerr=err, hue='sign', dodge=True, palette=bipolar)
 # plt.legend([],[], frameon=False)
 # plt.tight_layout()
 
@@ -174,9 +187,8 @@ p = 'p<0.001' if p < 0.001 else f'p={p:.0e}'
 plot_df = pd.DataFrame({'hth_corr': df['hth_corr'], 
                         'loading': pls_result["y_loadings"][:, lv], 
                         'module': df['ci']})
-spectral = [color for i, color in enumerate(sns.color_palette('Spectral')) if i in [1,2,4]]
 
-sns.regplot(x=hth, y=loadings, scatter_kws={'s': 0}, color='black', ci=None)
+sns.regplot(data=plot_df, x='hth_corr', y='loading', scatter_kws={'s': 0}, color='black', ci=None)
 sns.scatterplot(data=plot_df, x='hth_corr', y='loading', hue='module', palette=spectral)
 plt.legend(frameon=False, title='Module')
 plt.xlabel('Receptor similarity to FC$_{Hypothalamus}$')
@@ -186,19 +198,23 @@ sns.despine()
 if savefigs:
     plt.savefig('figs/hth_corr_vs_loadings.pdf')
 
-# %%
+# %% PLOT BRAINMAPS ON SURFACE
 from surfplot import Plot
 from neuromaps.datasets import fetch_fslr
 from brainspace.datasets import load_parcellation
 from utils import index_structure
 from plot_utils import divergent_green_orange
 
-# turn pls scores into dataframe for plotting
-plot_df = pd.DataFrame({'cognitive': pls_result["y_scores"][:, 0], 'receptor': pls_result["x_scores"][:, 0]})
-plot_data = index_structure(plot_df, structure='CTX')
-plot_df.to_csv('results/pls_scores_Schaefer400_TianS4_HTH.csv', index=False)
+scores_fn = 'results/pls_scores_Schaefer400_TianS4_HTH.csv'
+if os.path.exists(scores_fn):
+    plot_df = pd.read_csv(scores_fn)
+else:
+    # turn pls scores into dataframe for plotting
+    plot_df = pd.DataFrame({'cognitive': pls_result["y_scores"][:, lv], 'receptor': pls_result["x_scores"][:, lv]})
+    plot_data = index_structure(plot_df, structure='CTX')
+    # plot_df.to_csv('results/pls_scores_Schaefer400_TianS4_HTH.csv', index=False)
 
-# %%
+# %% CORTEX
 # load surface and parcellation
 surfaces = fetch_fslr()
 lh, rh = surfaces['inflated']
