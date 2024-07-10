@@ -1,5 +1,4 @@
 import itertools
-import random
 import numpy as np
 import pandas as pd
 from scipy.sparse.linalg import expm
@@ -360,14 +359,14 @@ def index_structure(df, structure='CTX-SBCTX'):
 
 def reorder_subcortex(gene_df, type='freesurfer', region_info=None):
     """
-    Reorders the gene expression data for subcortex regions to match the freesurfer or enigma atlas.
+    Reorders the gene expression data for Tian subcortex regions to match the freesurfer or enigma atlas.
     Parameters
     ----------
     gene_df : pandas.DataFrame
         Gene expression data to be reordered
     type : str
         Type of atlas to reorder to. Can be 'freesurfer' or 'enigma'
-    region_info : pandas.DataFrame
+    region_info : pandas.DataFrame, optional
         Region information dataframe to reorder to freesurfer atlas
     Returns
     -------
