@@ -283,6 +283,33 @@ def divergent_green_orange(N=100, return_palette=False, n_colors=8):
     else:
         return mpc.LinearSegmentedColormap.from_list('custom', rgb, N=N)    
 
+def cozy_adventure(n_colors=16):
+    """
+    Generate a divergent green-orange colormap.
+
+    Parameters
+    ----------
+    n_colors : int, optional
+        Number of colors in the colormap. Default is 16.
+        
+    Returns
+    -------
+    color palette
+        A seaborn color palette.
+        
+    Examples
+    --------
+    Generate a seaborn color palette with 5 colors:
+    >>> palette = cozy_adventure(n_colors=5)
+    """
+    
+    clist = ["ffd887", "eb9361", "da5e4e", "ab2330", "dfffff", "b5de89", "6aab7c", "26616b", "a2dceb", 
+             "759ed0", "434ea8", "2a2140", "e1a7c5", "ab7ac6", "735bab", "3b3772"]
+    hex = [f'#{c}' for c in clist]
+    rgb = list(map(mpc.to_rgb, hex))
+    
+    return sns.color_palette(rgb, n_colors=n_colors)
+
 def cmap_from_hex(clist, N=100, return_palette=False, n_colors=8):
     """
     Create a custom colormap from a list of hexadecimal color codes.
