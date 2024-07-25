@@ -1,7 +1,5 @@
 # %%
 import os
-from xml import dom
-from cv2 import normalize
 import numpy as np
 import pandas as pd
 import scipy.stats as sstats
@@ -11,7 +9,9 @@ from neuromaps.stats import compare_images
 from netneurotools.stats import get_dominance_stats
 from plot_utils import divergent_green_orange
 
-# %%
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                         LOAD DATA
+###############################################################################
 # load gene expression data
 gene_list = pd.read_csv('data/gene_list.csv')
 receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).iloc[:-1]
@@ -24,7 +24,9 @@ palette = divergent_green_orange(n_colors=9, return_palette=True)
 bipolar = [palette[1], palette[-2]]
 spectral = [color for i, color in enumerate(sns.color_palette('Spectral')) if i in [1,2,4]]
 
-# %% DOMINANCE ANALYSIS
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                         DOMINANCE ANALYSIS
+###############################################################################
 # check if already computed
 da_fn = 'results/da_nt_peptides_alldominance.npy'
 if os.path.exists(da_fn):
@@ -43,6 +45,7 @@ dom_global_total = [_[0]["total_dominance"] for _ in dom_global_list]
 dom_global_total = np.array(dom_global_total)
 dom_global_rel = dom_global_total / dom_global_total.sum(axis=0)
 del dom_global_list
+
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #                         PLOT DOMINANCE HEATMAP
@@ -83,6 +86,7 @@ ax2.set_yticklabels(receptors_by_dominance)
 ax2.set_xticklabels(ax2.get_xticklabels(), rotation=90, horizontalalignment='center')
 plt.tight_layout()
 plt.savefig('figs/colocalization_nt_peptides.pdf')
+
 
 # %% VALIDATION
 # correlate gene and PET map for kappa-opioid receptor
@@ -128,6 +132,7 @@ plt.title(f'r={r:.2f}\n P$_{{SMASH}}$={p_pet:.4f} | P$_{{gene}}$={p_gene:.4f}')
 plt.xlim(0,1)
 sns.despine()
 plt.savefig('figs/mu_opioid_receptor_comparison.pdf')
+
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #                          PLOT BY M/I CATEGORIES
@@ -186,89 +191,11 @@ metab = validation_df.loc['metabotropic']
 iono = validation_df.loc['ionotropic']
 sstats.ttest_ind(metab, iono)
 
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#                        CLUSTER DOMINANCE MATRIX
-###############################################################################
-
-df = pd.DataFrame(dom_global_total.T, columns=receptor_genes.columns, index=nt_densities.columns)
-m_i = pd.read_csv('data/annotations/receptor_classes.csv', index_col=0)['Metab/Iono']
-
-sns.clustermap(df, cmap=divergent_green_orange(), center=0, vmin=0, figsize=(14, 10), col_cluster=False,
-                row_colors=m_i.map({'metabotropic': spectral[2], 'ionotropic': spectral[1]}))
-
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#                        ORDER BY DOMINANCE MATRIX
-###############################################################################
-
-df = pd.DataFrame(dom_global_total.T, columns=receptor_genes.columns, index=nt_densities.columns)
-receptors_by_dominance = df.sum(axis=0).sort_values(ascending=True).index
-idx = [df.columns.get_loc(_) for _ in receptors_by_dominance]
-df = df.loc[:, receptors_by_dominance]
-
-# prepare figure
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 10), gridspec_kw={'width_ratios': [1, 3]}, 
-                               dpi=200)
-
-# barplot of total dominance
-orange_color = bipolar[1]
-sns.barplot(x=df.sum(axis=0), y=receptors_by_dominance, ax=ax1, 
-            color=orange_color)
-ax1.set_xlabel('Total dominance', fontsize=14)
-ax1.set_xlim(0, 1)
-ax1.set_yticks([])
-ax1.invert_xaxis()
-sns.despine(ax=ax1, left=True)
-
-# heatmap with each neurotransmitter as a column
-sns.heatmap(dom_global_rel[idx], xticklabels=df.index, 
-            yticklabels=receptors_by_dominance, cbar_kws={'shrink': 0.5}, 
-            ax=ax2, cmap=divergent_green_orange(), center=0, vmin=0,
-            linecolor='white', linewidths=0.5)
-
-cbar = ax2.collections[0].colorbar
-cbar.set_label('Dominance', size=14)
-ax2.set_yticklabels(receptors_by_dominance)
-ax2.set_xticklabels(ax2.get_xticklabels(), rotation=90, horizontalalignment='center')
-plt.tight_layout()
-plt.savefig('figs/colocalization_nt_peptides.pdf')
-
-
-# %%
-df = pd.DataFrame(dom_global_total.T, columns=receptor_genes.columns, index=nt_densities.columns)
-dom_order = df.sum(axis=0).sort_values(ascending=True).index
-df = df.loc[:, dom_order]
-
-# prepare figure
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 10), gridspec_kw={'width_ratios': [1, 3]}, 
-                               dpi=200)
-
-# barplot of total dominance
-orange_color = bipolar[1]
-sns.barplot(x=df.sum(axis=0), y=dom_order, ax=ax1, 
-            color=orange_color)
-ax1.set_xlabel('Total dominance', fontsize=14)
-ax1.set_xlim(0, 1)
-ax1.set_yticks([])
-ax1.invert_xaxis()
-sns.despine(ax=ax1, left=True)
-
-# heatmap with each neurotransmitter as a column
-sns.heatmap(df.T, xticklabels=df.index, 
-            yticklabels=dom_order, cbar_kws={'shrink': 0.5}, 
-            ax=ax2, cmap=divergent_green_orange(), center=0, vmin=0,
-            linecolor='white', linewidths=0.5)
-
-cbar = ax2.collections[0].colorbar
-cbar.set_label('Dominance', size=14)
-ax2.set_yticklabels(dom_order)
-ax2.set_xticklabels(ax2.get_xticklabels(), rotation=90, horizontalalignment='center')
-# increase whitespace between subplots
-plt.tight_layout()
-
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #                         PLOT BY Gs/Gi/Gq CATEGORIES
 ###############################################################################
+# plot distribution of GPCR categories
 receptor_classes['Gs/Gi/Gq'].value_counts().plot(kind='bar')
 
 # do same for dom_global_total
