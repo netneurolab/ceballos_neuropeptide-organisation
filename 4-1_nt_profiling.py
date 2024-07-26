@@ -15,7 +15,6 @@ savefig = False
 #                         LOAD DATA
 ###############################################################################
 # load gene expression data
-gene_list = pd.read_csv('data/gene_list.csv')
 receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).iloc[:-1]
 
 # load receptor names from data/annotations
