@@ -14,7 +14,9 @@ from plot_utils import divergent_green_orange, split_barplot
 
 savefigs = False
 
-# %% LOAD DATA
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                         LOAD DATA
+###############################################################################
 # Load neurosynth
 ns = pd.read_csv('./data/neurosynth_Schaefer400_TianS4.csv', index_col=0)
 
@@ -26,7 +28,9 @@ palette = divergent_green_orange(n_colors=9, return_palette=True)
 bipolar = [palette[1], palette[-2]]
 spectral = [color for i, color in enumerate(sns.color_palette('Spectral')) if i in [1,2,4]]
 
-# %% Gene null sets
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                         GENE NULL SETS
+###############################################################################
 nperm = 10000
 
 # Load gene nulls if existent otherwise generate
@@ -49,7 +53,9 @@ else:
     nulls = np.array(nulls)
     np.save('data/gene_null_sets_Schaefer400_TianS4_HTH.npy', nulls)
 
-# %% PLS
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                              PLS1
+###############################################################################
 # Define X and Y
 X = zscore(ns.values, ddof=1)
 Y = zscore(receptor_genes.values, ddof=1)
@@ -81,12 +87,15 @@ plt.title(f'LV{lv+1} accounts for {cv[lv]*100:.2f}% covariance | p = {p:.4f}');
 if savefigs:
     plt.savefig('figs/pls_covexp.pdf')
 
-# %% Redo PLS for X
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                              PLS2
+###############################################################################
 # Switch X and Y
 X = zscore(receptor_genes.values, ddof=1)
 Y = zscore(ns.values, ddof=1)
 nlv = len(X.T) if len(X.T) < len(Y.T) else len(Y.T) # number of latent variables
 
+# check if already computed
 pls_result_X_fn = 'results/pls_result_X_Schaefer400_TianS4_HTH.pickle'
 if os.path.exists(pls_result_X_fn):
     with open(pls_result_X_fn, 'rb') as f:
@@ -109,7 +118,9 @@ p_X = (1+sum(null_singvals_X[lv, :] > pls_result_X["singvals"][lv]))/(1+nperm)
 
 print(f"p-value: {p_X:.4f}")
 
-# %% plot scores
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                              PLOT SCORES
+###############################################################################
 scores_fn = 'results/pls_scores_Schaefer400_TianS4_HTH.csv'
 
 if os.path.exists(scores_fn):
@@ -136,7 +147,9 @@ plt.ylabel('Cognitive scores')
 if savefigs:
     plt.savefig('figs/scores.pdf')
 
-# %% Plot receptor loadings
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                          PLOT RECEPTOR LOADINGS
+###############################################################################
 receptor_names = receptor_genes.columns
 
 # error bars are ci from bootstrapping
@@ -159,7 +172,9 @@ if savefigs:
 # plt.legend([],[], frameon=False)
 # plt.tight_layout()
 
-# %% Plot cognitive loadings
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                          PLOT COGNITIVE LOADINGS
+###############################################################################
 cognitive_terms = ns.columns
 
 # error bars are ci from bootstrapping
@@ -176,8 +191,10 @@ fig, axes = split_barplot(cognition_df, x='loading', y='cognitive_term', top=20,
 if savefigs:
     plt.savefig('figs/cognitive_loadings.pdf')
 
-# %% LOADINGS VS HTH FC SIMILARITY
-# load hypothalamus-receptor FC
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                          LOADING VS HTH FC
+###############################################################################
+# load hypothalamus FC
 df = pd.read_csv('./results/receptor_hth_coupling_Schaefer400_TianS4.csv', index_col=0)
 hth = df['hth_corr'].values
 loadings = pls_result["y_loadings"][:, 0]
@@ -198,7 +215,9 @@ sns.despine()
 if savefigs:
     plt.savefig('figs/hth_corr_vs_loadings.pdf')
 
-# %% PLOT BRAINMAPS ON SURFACE
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                         PLOT BRAINMAPS ON SURFACE
+###############################################################################
 from surfplot import Plot
 from neuromaps.datasets import fetch_fslr
 from brainspace.datasets import load_parcellation
