@@ -340,7 +340,8 @@ def index_structure(df, structure='CTX-SBCTX'):
     df : pandas.DataFrame
         Dataframe to be indexed
     structure : str
-        Structure to index by. Can be CTX, SBCTX, CTX-SBCTX
+        Structure to index by. Can be CTX, SBCTX, HTH, CTX-SBCTX, CTX-HTH or 
+        SBCTX-HTH
     Returns
     -------
     indexed_df : pandas.DataFrame
@@ -350,10 +351,17 @@ def index_structure(df, structure='CTX-SBCTX'):
         indexed_df = df.iloc[54:-1]
     elif structure == 'SBCTX':
         indexed_df = df.iloc[:54]
+    elif structure == 'HTH':
+        indexed_df = df.iloc[-1]
     elif structure == 'CTX-SBCTX':
         indexed_df = df.iloc[:-1]
+    elif structure == 'CTX-HTH':
+        indexed_df = df.iloc[54:]
+    elif structure == 'SBCTX-HTH':
+        indexed_df = pd.concat((df.iloc[:54], df.iloc[-1]))
     else:
-        raise ValueError('Invalid structure. Must be CTX, SBCTX, or CTX-SBCTX')
+        raise ValueError('Invalid structure. Must be CTX, SBCTX, HTH, CTX-SBCTX, ' +
+                         'CTX-HTH or SBCTX-HTH')
     return indexed_df
 
 
