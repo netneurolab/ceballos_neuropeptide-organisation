@@ -14,7 +14,7 @@ savefig = False
 # load genes and gene list
 receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0)
 receptor_names = receptor_genes.columns
-receptor_list = pd.read_csv('data/receptor_list.csv')
+receptor_list = pd.read_csv('data/receptor_overview.csv')
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #                              RAW DATA PLOT
@@ -64,7 +64,7 @@ clustermap = sns.clustermap(receptor_genes, cmap=divergent_green_orange(), col_c
                             figsize=(14, 10))
                     
 # create a map to assign each gene to a family
-family_map = {gene: family for gene, family in zip(receptor_list['Gene'], receptor_list['Family']) \
+family_map = {gene: family for gene, family in zip(receptor_list['gene'], receptor_list['family']) \
               if gene in receptor_names}
 
 # crate family-wise color map
@@ -72,7 +72,7 @@ families = set(family_map.values())
 family_colors = sns.color_palette('tab20', n_colors=len(families))
 family_color_map = {family: color for family, color in zip(families, family_colors)}
 
-# color xticks by family in receptor_list
+# color xticks by family
 for i, label in enumerate(clustermap.ax_heatmap.get_xticklabels()):
     gene = label.get_text()
     family = family_map.get(gene)
@@ -106,7 +106,7 @@ network_genes = {network: receptor_genes[atlas_regions['network_alt'] == network
 network_genes = pd.DataFrame(network_genes).T
 
 # drop all right hemisphere networks
-# network_genes = network_genes.loc[~network_genes.index.str.contains('R')]
+network_genes = network_genes.loc[~network_genes.index.str.contains('R')]
 
 # define order of networks alphabetically. start with cortex networks, then subcortex networks and then hypothalamus
 network_order = [f'L_{ctx_net}' for ctx_net in ['Vis', 'SomMot', 'DorsAttn', 'SalVentAttn', 'Cont', 'Default', 'Limbic' ]] + \
@@ -123,7 +123,7 @@ clustermap = sns.clustermap(network_genes, cmap=divergent_green_orange(), col_cl
 clustermap.figure.set_dpi(200)
 
 # create a map to assign each gene to a family
-family_map = {gene: family for gene, family in zip(receptor_list['Gene'], receptor_list['Family']) \
+family_map = {gene: family for gene, family in zip(receptor_list['gene'], receptor_list['family']) \
               if gene in receptor_names}
 
 # create family-wise color map
@@ -138,11 +138,7 @@ for i, label in enumerate(clustermap.ax_heatmap.get_yticklabels()):
     family = family_map.get(gene)
     if family:
         label.set_color(family_color_map[family])
-        
-# # show legend based on family_color_map
-# legend_elements = [plt.Line2D([0], [0], marker='o', color='w', label=family, markerfacecolor=color, markersize=10) \
-#                      for family, color in family_color_map.items()]
-# clustermap.ax_heatmap.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.1, 1.05))
+
         
 if savefig:
     plt.savefig('./figs/genes_network_clustermap.pdf')
@@ -207,92 +203,3 @@ sns.despine(trim=True)
 
 if savefig:
     plt.savefig('./figs/median_expression_trace.pdf')
-
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#             SUPPLEMENTARY: RECEPTOR LOCATION IN PC SPACE
-###############################################################################
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-
-# load all abagen genes
-all_genes = pd.read_csv('data/abagen_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0)
-
-# standardize data columnwise
-scaler = StandardScaler()
-genes_scaled = scaler.fit_transform(all_genes.values)
-
-# fit PCA
-pca = PCA(n_components=2)
-pca.fit(genes_scaled)
-
-# locate receptors in PCA space
-ctx_idx = [i for i, gene in enumerate(all_genes.columns) if gene in receptor_names[order_idx][:16]]
-sbctx_idx = [i for i, gene in enumerate(all_genes.columns) if gene in receptor_names[order_idx][16:]]
-mchr_idx = [i for i, gene in enumerate(all_genes.columns) if gene=='MCHR1']
-oxtr_idx = [i for i, gene in enumerate(all_genes.columns) if gene=='OXTR']
-
-# plot first two PCs
-plt.figure(figsize=(5,5))
-sns.scatterplot(x=pca.components_[0], y=pca.components_[1], color='gray', linewidth=0, alpha=0.2)
-sns.scatterplot(x=pca.components_[0][ctx_idx], y=pca.components_[1][ctx_idx], color=green, edgecolor='black')
-sns.scatterplot(x=pca.components_[0][sbctx_idx], y=pca.components_[1][sbctx_idx], color=orange, edgecolor='black')
-sns.scatterplot(x=pca.components_[0][mchr_idx], y=pca.components_[1][mchr_idx], color='red', edgecolor='black')
-sns.scatterplot(x=pca.components_[0][oxtr_idx], y=pca.components_[1][oxtr_idx], color='blue', edgecolor='black')
-
-plt.xlabel('PC1')
-plt.ylabel('PC2')
-plt.legend(['all genes', 'cortical', 'subcortical'], bbox_to_anchor=(1.01, 1), frameon=False)
-sns.despine()
-
-if savefig:
-    plt.savefig('./figs/pca.pdf')
-    
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#             SUPPLEMENTARY: COMPARE PEPTIDE PCs TO GENE PCs
-###############################################################################
-# redo PCA for all genes
-scaler = StandardScaler()
-pca = PCA(n_components=3)
-
-all_scaled = scaler.fit_transform(all_genes.values)
-pca_all = pca.fit_transform(genes_scaled)[:, :3]
-
-# PCA for peptide receptor genes
-receptors__scaled = scaler.fit_transform(receptor_genes.drop('structure', axis=1).values)
-pca_receptors = pca.fit_transform(receptors__scaled)[:,:3]
-
-# correlate PCs between all genes and peptide receptor genes
-# do it for all combinations of PCs
-corrs = np.zeros((3, 3))
-for i in range(3):
-    for j in range(3):
-        corrs[i,j] = np.corrcoef(pca_all[:,i], pca_receptors[:,j])[0,1]
-        
-# plot correlation matrix
-plt.figure(figsize=(5,5),dpi=200)
-sns.heatmap(corrs, annot=True, cmap=divergent_green_orange(), square=True, center=0)
-
-# scatterplot of first PC for all genes and peptide receptor genes
-network = atlas_regions['network']
-plt.figure(figsize=(5,5),dpi=200)
-sns.scatterplot(x=pca_all[:,0], y=pca_receptors[:,0], color='gray', alpha=0.5,
-                hue=network, palette='tab10')
-
-
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#               SUPPLEMENTARY: ALTERNATIVE CLUSTERMAP
-###############################################################################
-from scipy.cluster.hierarchy import dendrogram, linkage, leaves_list
-from scipy.spatial.distance import pdist
-receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0)
-distance_matrix = pdist(receptor_genes.T.values, metric='euclidean')
-Z = linkage(distance_matrix, method='average')
-reordered_indices = leaves_list(Z)
-
-receptors = receptor_genes.columns[reordered_indices]
-family_map = {gene: family for gene, family in zip(receptor_list['Gene'], receptor_list['Family']) \
-              if gene in receptors}
-
-# print gene and family
-for gene, family in family_map.items():
-    print(f'{gene}: {family}')
