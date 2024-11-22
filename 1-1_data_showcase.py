@@ -1,7 +1,5 @@
 # %%
 import pandas as pd
-import numpy as np
-from scipy import cluster
 import seaborn as sns
 import matplotlib.pyplot as plt
 from plot_utils import divergent_green_orange
@@ -12,12 +10,12 @@ savefig = False
 #                              LOAD DATA
 ###############################################################################
 # load genes and gene list
-receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0)
+receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).reset_index(drop=True)
 receptor_names = receptor_genes.columns
 receptor_list = pd.read_csv('data/receptor_overview.csv')
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#                              RAW DATA PLOT
+#                     ASSIGN ATLAS REGIONS TO NETWORKS
 ###############################################################################
 
 # load region names
@@ -36,70 +34,19 @@ name_map = {'HIP': 'hippocampus',
 
 # change the name of regions in subcortex using name_map
 atlas_regions['name'] = atlas_regions['name'].str.split('-').str[0].replace(name_map)
-receptor_genes.index = atlas_regions['id'].values
 
 # group df first by structure, then network, and then name
 atlas_regions = atlas_regions.groupby(['structure', 'network', 'name']).apply(lambda x: x).reset_index(drop=True)
 
-# reorder receptor_genes according to atlas_regions
-receptor_genes = receptor_genes.loc[atlas_regions['id']]
-
-# map index back to name
-receptor_genes.index = receptor_genes.index.map(atlas_regions.set_index('id')['name'])
-
-# find where the structure changes
-# create new list of structures
-structures = [s[1]['name'].split('_')[0] 
-              if s[1]['structure'] == 'cortex' 
-              else s[1]['structure'].capitalize()
-              for s in atlas_regions.iterrows()]
-structures = np.array(structures)
-
-# at which index is there a change in structures
-change_ind = np.where(np.array(structures[:-1]) != np.array(structures[1:]))[0]
-
-# plot clustermap and have the dendrogram on the same side of the xticks
-clustermap = sns.clustermap(receptor_genes, cmap=divergent_green_orange(), col_cluster=True, row_cluster=False, 
-                            xticklabels=True, cbar_kws={'label': 'gene expression'}, cbar_pos=None,
-                            figsize=(14, 10))
-                    
-# create a map to assign each gene to a family
-family_map = {gene: family for gene, family in zip(receptor_list['gene'], receptor_list['family']) \
-              if gene in receptor_names}
-
-# crate family-wise color map
-families = set(family_map.values())
-family_colors = sns.color_palette('tab20', n_colors=len(families))
-family_color_map = {family: color for family, color in zip(families, family_colors)}
-
-# color xticks by family
-for i, label in enumerate(clustermap.ax_heatmap.get_xticklabels()):
-    gene = label.get_text()
-    family = family_map.get(gene)
-    if family:
-        label.set_color(family_color_map[family])
-
-clustermap.ax_heatmap.set_yticks(change_ind)
-clustermap.ax_heatmap.set_yticklabels(structures[change_ind]);
-
-# draw lines at change_ind
-for ind in change_ind:
-    clustermap.ax_heatmap.axhline(ind, color='white', linewidth=3)
-    clustermap.ax_heatmap.axhline(ind, color='black', linewidth=3, alpha=0.8)
-
-if savefig:
-    plt.savefig('./figs/genes_clustermap.pdf', bbox_inches='tight')
-
+# create network label with hemisphere
+atlas_regions = atlas_regions.sort_values('id').reset_index()
+atlas_regions['network_alt'] = atlas_regions['hemisphere'] + '_' + atlas_regions['name'].str.split('_').str[0].replace(name_map)
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #                            AVERAGE BY NETWORK
 ###############################################################################
-# rename networks to differentiate between left and right hemisphere
-receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).reset_index(drop=True)
-atlas_regions = atlas_regions.sort_values('id').reset_index()
-atlas_regions['network_alt'] = atlas_regions['hemisphere'] + '_' + atlas_regions['name'].str.split('_').str[0].replace(name_map)
 
-# group by network and average
+# group by receptor data by network and average per network
 networks = atlas_regions['network_alt'].unique()
 network_genes = {network: receptor_genes[atlas_regions['network_alt'] == network].mean(axis=0) \
                  for network in networks}
@@ -108,12 +55,12 @@ network_genes = pd.DataFrame(network_genes).T
 # drop all right hemisphere networks
 network_genes = network_genes.loc[~network_genes.index.str.contains('R')]
 
-# define order of networks alphabetically. start with cortex networks, then subcortex networks and then hypothalamus
+# define order of networks
 network_order = [f'L_{ctx_net}' for ctx_net in ['Vis', 'SomMot', 'DorsAttn', 'SalVentAttn', 'Cont', 'Default', 'Limbic' ]] + \
                 [f'L_{sbctx_net}' for sbctx_net in ['amygdala', 'caudate', 'globus-pallidus', 'hippocampus', 'nucleus-accumbens', 'putamen', 'thalamus']] + \
                 ['B_hypothalamus']
 
-# reorder network_genes
+# reorder data and transpose to have genes as rows
 network_genes = network_genes.loc[network_order].T
 
 # plot clustermap and have the dendrogram on the same side of the xticks
@@ -138,8 +85,7 @@ for i, label in enumerate(clustermap.ax_heatmap.get_yticklabels()):
     family = family_map.get(gene)
     if family:
         label.set_color(family_color_map[family])
-
-        
+ 
 if savefig:
     plt.savefig('./figs/genes_network_clustermap.pdf')
 
