@@ -246,6 +246,38 @@ sns.despine()
 
 if savefig:
     plt.savefig('./figs/pca.pdf')
+    
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#             SUPPLEMENTARY: COMPARE PEPTIDE PCs TO GENE PCs
+###############################################################################
+# redo PCA for all genes
+scaler = StandardScaler()
+pca = PCA(n_components=3)
+
+all_scaled = scaler.fit_transform(all_genes.values)
+pca_all = pca.fit_transform(genes_scaled)[:, :3]
+
+# PCA for peptide receptor genes
+receptors__scaled = scaler.fit_transform(receptor_genes.drop('structure', axis=1).values)
+pca_receptors = pca.fit_transform(receptors__scaled)[:,:3]
+
+# correlate PCs between all genes and peptide receptor genes
+# do it for all combinations of PCs
+corrs = np.zeros((3, 3))
+for i in range(3):
+    for j in range(3):
+        corrs[i,j] = np.corrcoef(pca_all[:,i], pca_receptors[:,j])[0,1]
+        
+# plot correlation matrix
+plt.figure(figsize=(5,5),dpi=200)
+sns.heatmap(corrs, annot=True, cmap=divergent_green_orange(), square=True, center=0)
+
+# scatterplot of first PC for all genes and peptide receptor genes
+network = atlas_regions['network']
+plt.figure(figsize=(5,5),dpi=200)
+sns.scatterplot(x=pca_all[:,0], y=pca_receptors[:,0], color='gray', alpha=0.5,
+                hue=network, palette='tab10')
+
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #               SUPPLEMENTARY: ALTERNATIVE CLUSTERMAP
