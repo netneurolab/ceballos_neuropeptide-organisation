@@ -18,7 +18,7 @@ savefig = False
 receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).iloc[:-1]
 
 # load receptor names from data/annotations
-nt_densities = pd.read_csv('data/annotations/nt_receptor_densities.csv', index_col=0)
+nt_densities = pd.read_csv('data/annotations/nt_receptor_densities_Schaefer400_TianS4_HTH.csv', index_col=0)
 
 # Load colors
 palette = divergent_green_orange(n_colors=9, return_palette=True)
@@ -115,7 +115,7 @@ if savefig:
 ###############################################################################
 
 # load receptor classes
-receptor_classes = pd.read_csv('data/annotations/receptor_classes.csv')
+receptor_classes = pd.read_csv('data/annotations/nt_receptor_classes.csv')
 
 # discard transporters
 receptor_classes = receptor_classes[~receptor_classes['Metab/Iono'].str.contains('trans')]
