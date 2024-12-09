@@ -34,7 +34,7 @@ __pycache__/
 *.txt
 *.json
 *.npz
-
+*.tex
 
 # Folders
 tmp/
