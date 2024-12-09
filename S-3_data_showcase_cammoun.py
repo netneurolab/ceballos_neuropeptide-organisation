@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pyls import behavioral_pls
 from scipy.stats import zscore, spearmanr
-from plot_utils import divergent_green_orange, split_barplot
+from plot_utils import divergent_green_orange
 
 savefig = False
 
