@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 import pandas as pd
+from brainconn.distance import distance_wei_floyd, mean_first_passage_time, retrieve_shortest_path
 from scipy.sparse.linalg import expm
 from scipy.stats import ks_2samp
 from joblib import Parallel, delayed
@@ -149,9 +150,6 @@ def gene_null_set(gene_set, non_overlapping_set, distance, null_set_size=100, n_
         moran_i.append(morans_i(distance, gene_set[gene].values))
     moran_i = np.array(moran_i)
 
-    # # make sure to have as many genes as regions
-    # null_set_size = max(n_regions, null_set_size)
-
     # parallelize using joblib
     null_set = Parallel(n_jobs=n_jobs,)(delayed(get_gene_null)(gene_set, moran_i, non_overlapping_set, distance, 
                                                               null_set_size=null_set_size, seed=i)
@@ -227,7 +225,7 @@ def search_information(W, L, has_memory=False):
         # singular matrix! solve for x using pseudo-inverse
         T = np.linalg.pinv(np.diag(np.sum(W, axis=1))) @ W
         
-    _, hops, Pmat = bc.distance.distance_wei_floyd(L, transform=None)
+    _, hops, Pmat = distance_wei_floyd(L, transform=None)
 
     SI = np.zeros((N, N))
     SI[np.eye(N) > 0] = np.nan
@@ -235,7 +233,7 @@ def search_information(W, L, has_memory=False):
     for i in range(N):
         for j in range(N):
             if (j > i and flag_triu) or (not flag_triu and i != j):
-                path = bc.distance.retrieve_shortest_path(i, j, hops, Pmat)
+                path = retrieve_shortest_path(i, j, hops, Pmat)
                 lp = len(path) - 1
                 if flag_triu:
                     if np.any(path):
@@ -279,6 +277,31 @@ def search_information(W, L, has_memory=False):
                         SI[i, j] = np.inf
 
     return SI
+
+
+def non_diagonal_elements(matrix):
+    mat = matrix.copy()
+    rows, cols = np.triu_indices(matrix.shape[0], k=1)
+    return mat[rows, cols].flatten()
+
+
+def communication_measures(sc, sc_neglog, dist_mat):
+    spl_mat, sph_mat, _ = distance_wei_floyd(sc_neglog)
+    nsr, nsr_n, npl_mat_asym, nph_mat_asym, nav_paths = navigation_wu(dist_mat, sc)
+    npe_mat_asym = 1 / npl_mat_asym
+    npe_mat = (npe_mat_asym + npe_mat_asym.T) / 2
+    sri_mat_asym = search_information(sc, sc_neglog)
+    sri_mat = (sri_mat_asym + sri_mat_asym.T) / 2
+    cmc_mat = communicability_wei(sc)
+    mfpt_mat_asym = mean_first_passage_time(sc)
+    dfe_mat_asym = 1 / mfpt_mat_asym
+    dfe_mat = (dfe_mat_asym + dfe_mat_asym.T) / 2
+
+
+    sc_comm_mats = [spl_mat, npe_mat, sri_mat, cmc_mat, dfe_mat]
+    sc_comm_mats = list(map(lambda x: non_diagonal_elements(x), sc_comm_mats))
+
+    return sc_comm_mats
 
 
 def group_by_index(val_List, idx_list):

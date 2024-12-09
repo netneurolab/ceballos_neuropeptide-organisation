@@ -1,4 +1,5 @@
 # %%
+from operator import index
 import os
 os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = '/poolz2/ceballos/miniconda3/envs/peptides/python3.11/site-packages/PyQt5/Qt5/plugins/platforms'
 
@@ -17,7 +18,7 @@ atlas = nib.load('./data/parcellations/Schaefer2018_400_7N_Tian_Subcortex_S4_spa
 atlas_info = pd.read_csv('./data/parcellations/Schaefer2018_400_7N_Tian_Subcortex_S4_LUT.csv')
 
 # load peptide receptor names
-receptors = pd.read_csv('./data/receptor_filtered.csv')['gene'].values
+receptors = pd.read_csv('./data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).columns
 
 # check atlas and atlas_info
 atlas = check_atlas(atlas, atlas_info)
@@ -98,6 +99,54 @@ for ind in change_ind:
 
 plt.savefig('./figs/sex_differences.pdf', bbox_inches='tight')
 
+
+# %%
+female_df = pd.DataFrame(zscored_female_data, columns=receptors, index=atlas_info['name'])
+
+# load region names
+atlas_regions = pd.read_csv('./data/parcellations/Schaefer2018_400_7N_Tian_Subcortex_S4_LUT.csv', index_col=0)
+
+name_map = {'HIP': 'hippocampus',
+            'THA': 'thalamus',
+            'mAMY': 'amygdala',
+            'lAMY': 'amygdala',
+            'PUT': 'putamen',
+            'aGP': 'globus-pallidus',
+            'pGP': 'globus-pallidus',
+            'CAU': 'caudate',
+            'NAc': 'nucleus-accumbens',
+            'HTH': 'hypothalamus'}
+
+# change the name of regions in subcortex using name_map
+atlas_regions['name'] = atlas_regions['name'].str.split('-').str[0].replace(name_map)
+female_df.index = atlas_regions['id'].values
+
+# group df first by structure, then network, and then name
+atlas_regions = atlas_regions.groupby(['structure', 'network', 'name']).apply(lambda x: x).reset_index(drop=True)
+
+# average by network
+atlas_regions = atlas_regions.sort_values('id').reset_index()
+atlas_regions['network_alt'] = atlas_regions['hemisphere'] + '_' + atlas_regions['name'].str.split('_').str[0].replace(name_map)
+
+# group by network and average
+networks = atlas_regions['network_alt'].unique()
+network_genes = {network: female_df[(atlas_regions['network_alt'] == network).values].mean(axis=0) \
+                 for network in networks}
+network_genes = pd.DataFrame(network_genes).T
+
+network_order = [f'L_{ctx_net}' for ctx_net in ['Vis', 'SomMot', 'DorsAttn', 'SalVentAttn', 'Cont', 'Default', 'Limbic' ]] + \
+                [f'L_{sbctx_net}' for sbctx_net in ['amygdala', 'caudate', 'globus-pallidus', 'hippocampus', 'nucleus-accumbens', 'putamen', 'thalamus']] + \
+                ['B_hypothalamus']
+
+# reorder network_genes
+network_genes = network_genes.loc[network_order].T
+
+# plot as heatmap
+fig, ax = plt.subplots(figsize=(5, 11), dpi=200)
+sns.heatmap(network_genes, cmap=divergent_green_orange(), cbar_kws={'label': 'Z-score', 'shrink':0.5}, 
+            linewidths=0.01, linecolor='white', square=True, ax=ax)
+
+plt.savefig('./figs/sexdiff_networks.pdf', bbox_inches='tight')
 # %%
 from netneurotools.plotting import plot_fslr
 from neuromaps.images import dlabel_to_gifti

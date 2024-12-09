@@ -93,7 +93,7 @@ stable_genes = corr_df.loc[:, corr_df.mean() > 0.2].columns
 # alternatively, include all peptide genes
 # stable_genes = corr_df.columns
 
-abagen_genes = pd.read_csv('data/abagen_genes_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).columns
+abagen_genes = pd.read_csv('data/abagen_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).columns
 relevant_genes = np.intersect1d(stable_genes, abagen_genes)
 
 # load differential stability
