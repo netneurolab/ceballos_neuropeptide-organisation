@@ -69,5 +69,5 @@ for receptor in receptors:
 
     p = Plot(lh, views=['lateral','medial'], zoom=1.2, size=(1200, 800), brightness=0.6)
     p.add_layer(plot_data, cmap=divergent_green_orange(), tick_labels=['min', 'max'])#, cbar_label=full_name)
-    p.build(dpi=300, save_as=f'figures/{receptor}_brainmap.pdf');
+    p.build(dpi=300, save_as=f'figs/{receptor}_brainmap.pdf');
 
