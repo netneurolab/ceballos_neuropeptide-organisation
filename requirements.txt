@@ -12,11 +12,11 @@ NiMARE==0.2.2
 numpy==1.24.3
 pandas==2.2.3
 pingouin==0.5.4
-pyls==0.0.1
 pyparsing==3.2.0
 Requests==2.32.3
 scikit_learn==1.2.2
 scipy==1.14.1
 seaborn==0.13.2
-surfplot==0.2.0
 tqdm==4.66.1
+git+https://github.com/eric2302/surfplot.git
+git+https://github.com/netneurolab/pypyls.git
