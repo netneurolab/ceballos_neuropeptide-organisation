@@ -89,7 +89,7 @@ sns.scatterplot(x=range(nlv), y=cv*100, s=10, color='orange', linewidth=0.8, edg
 plt.ylabel("Covariance accounted for [%]")
 plt.xlabel("Latent variables")
 plt.xticks([])
-plt.title(f'LV{lv+1} accounts for {cv[lv]*100:.2f}% covariance | p = {p:.4f}');;
+plt.title(f'LV{lv+1} accounts for {cv[lv]*100:.2f}% covariance | p = {p:.4f}');
 
 if savefigs:
     plt.savefig('figs/pls_cov_exp.pdf')
