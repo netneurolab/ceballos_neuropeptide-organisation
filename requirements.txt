@@ -17,3 +17,4 @@ seaborn==0.13.2
 tqdm==4.66.1
 git+https://github.com/eric2302/surfplot.git
 git+https://github.com/netneurolab/pypyls.git
+git+https://github.com/fiuneuro/brainconn.git
