@@ -14,7 +14,7 @@ pyparsing==3.2.0
 Requests==2.32.3
 scipy==1.14.1
 seaborn==0.13.2
-tqdm==4.66.1
+tqdm==4.66.3
 git+https://github.com/eric2302/surfplot.git
 git+https://github.com/netneurolab/pypyls.git
 git+https://github.com/fiuneuro/brainconn.git
