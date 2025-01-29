@@ -67,7 +67,7 @@ df = df[receptors_by_dominance]
 
 # order nt receptors by ionotropic and metabotropic
 # load nt classes
-nt_classes = pd.read_csv('data/annotations/receptor_classes.csv', index_col=0)
+nt_classes = pd.read_csv('data/annotations/nt_receptor_classes.csv', index_col=0)
 mi = nt_classes['Metab/Iono'].loc[nt_names]
 
 # split df into two dfs and concatenate
@@ -245,6 +245,7 @@ print(f'Average variance explained by spatial nulls: {nulls:.3f}')
 ###############################################################################
 # drop OPRK1 and OPRM1 to test whether result remains significant
 validation_df = dom_rel_df.drop(['OPRK1', 'OPRM1'], axis=1)
+validation_df = validation_df.groupby('Metab/Iono').sum()
 
 metab = validation_df.loc['metabotropic']
 iono = validation_df.loc['ionotropic']
