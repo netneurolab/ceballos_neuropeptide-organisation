@@ -2,8 +2,9 @@ import itertools
 import numpy as np
 import pandas as pd
 from brainconn.distance import distance_wei_floyd, mean_first_passage_time, retrieve_shortest_path
+from sklearn.linear_model import LinearRegression
 from scipy.sparse.linalg import expm
-from scipy.stats import ks_2samp
+from scipy.stats import ks_2samp, zscore
 from joblib import Parallel, delayed
 
 def morans_i(dist, y, normalize=False, local=False, invert_dist=True):
@@ -156,10 +157,9 @@ def gene_null_set(gene_set, non_overlapping_set, distance, null_set_size=100, n_
                                       for i in range(n_permutations))
         
     return null_set
-    
 
 
-def navigation_wu(nav_dist_mat, sc_mat, show_progress=True):
+def navigation_wu(nav_dist_mat, sc_mat, show_progress=False):
     from tqdm import tqdm
     nav_paths = []  # (source, target, distance, hops, path)
     for src in tqdm(range(len(nav_dist_mat)), disable=not show_progress):
@@ -233,7 +233,11 @@ def search_information(W, L, has_memory=False):
     for i in range(N):
         for j in range(N):
             if (j > i and flag_triu) or (not flag_triu and i != j):
-                path = retrieve_shortest_path(i, j, hops, Pmat)
+                try:
+                    path = retrieve_shortest_path(i, j, hops, Pmat)
+                except ValueError as e:
+                    print(f"Error retrieving path from {i} to {j}: {e}")
+                    continue
                 lp = len(path) - 1
                 if flag_triu:
                     if np.any(path):
@@ -285,17 +289,17 @@ def non_diagonal_elements(matrix):
     return mat[rows, cols].flatten()
 
 
-def communication_measures(sc, sc_neglog, dist_mat):
+def communication_measures(sc, sc_neglog, dist_mat, symmetric=True):
     spl_mat, sph_mat, _ = distance_wei_floyd(sc_neglog)
     nsr, nsr_n, npl_mat_asym, nph_mat_asym, nav_paths = navigation_wu(dist_mat, sc)
-    npe_mat_asym = 1 / npl_mat_asym
-    npe_mat = (npe_mat_asym + npe_mat_asym.T) / 2
+    npe_mat_asym = 1 / (npl_mat_asym + np.finfo(float).eps)
+    npe_mat = (npe_mat_asym + npe_mat_asym.T) / 2 if symmetric else npe_mat_asym
     sri_mat_asym = search_information(sc, sc_neglog)
-    sri_mat = (sri_mat_asym + sri_mat_asym.T) / 2
+    sri_mat = (sri_mat_asym + sri_mat_asym.T) / 2 if symmetric else sri_mat_asym
     cmc_mat = communicability_wei(sc)
     mfpt_mat_asym = mean_first_passage_time(sc)
-    dfe_mat_asym = 1 / mfpt_mat_asym
-    dfe_mat = (dfe_mat_asym + dfe_mat_asym.T) / 2
+    dfe_mat_asym = 1 / (mfpt_mat_asym + np.finfo(float).eps)
+    dfe_mat = (dfe_mat_asym + dfe_mat_asym.T) / 2 if symmetric else dfe_mat_asym
 
 
     sc_comm_mats = [spl_mat, npe_mat, sri_mat, cmc_mat, dfe_mat]
