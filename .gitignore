@@ -28,6 +28,11 @@ __pycache__/
 
 # Other
 *.pdf
+*.eps
+*.jpeg
+*.jpg
+*.png
+*.svg
 *.csv
 *.gz
 *.tsv
