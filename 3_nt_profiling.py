@@ -111,6 +111,25 @@ if savefig:
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#                   PLOT DISTRIBUTION OF R^2
+###############################################################################
+# locate values for rows ['OPRK1', 'OPRM1'] and columns ['KOR', 'MOR']
+r2_df = df.T[sorted(df.T.columns)]
+kappa_opioid = r2_df.loc['OPRK1', 'KOR']
+mu_opioid = r2_df.loc['OPRM1', 'MOR']
+colocalization_distribution = r2_df.values.flatten()
+
+# plot kde of colocalization distribution and mark kappa and mu opioid receptors
+fig, ax = plt.subplots(figsize=(5, 3), dpi=200)
+ax.axvline(kappa_opioid, color='blue', linestyle='--', label='OPRK1-KOR')
+ax.axvline(mu_opioid, color='orange', linestyle='--', label='OPRM1-MOR')
+sns.kdeplot(colocalization_distribution, color='grey', label='Other pairs', ax=ax)
+# add legend
+ax.legend(bbox_to_anchor=(1, 1), frameon=False)
+plt.xlabel('Colocalization [R$^2$]')
+sns.despine()
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #                          PLOT BY M/I CATEGORIES
 ###############################################################################
 
