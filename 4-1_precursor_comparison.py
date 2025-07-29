@@ -62,13 +62,13 @@ hth_median = precursor_hth.median(axis=0)
 
 # do significance test between structures
 # test between hypothalamus and cortex
-tstat, pval = sstats.ttest_ind(hth_median, cortex_median, alternative='greater', equal_var=False)
+tstat, pval = sstats.ttest_ind(hth_median, cortex_median, alternative='two-sided', equal_var=False)
 print(f'Hypothalamus vs Cortex: t-statistic = {tstat:0.2f}, p-value = {pval:0.4f}')
 
 # test between subcortex and hypothalamus
-tstat, pval = sstats.ttest_ind(hth_median, subcortex_median, alternative='greater', equal_var=False)
+tstat, pval = sstats.ttest_ind(hth_median, subcortex_median, alternative='two-sided', equal_var=False)
 print(f'Hypothalamus vs Subcortex: t-statistic = {tstat:0.2f}, p-value = {pval:0.4f}')
 
 # test between cortex and subcortex
-tstat, pval = sstats.ttest_ind(cortex_median, subcortex_median, alternative='greater', equal_var=False)
+tstat, pval = sstats.ttest_ind(cortex_median, subcortex_median, alternative='two-sided', equal_var=False)
 print(f'Subcortex vs Cortex: t-statistic = {tstat:0.2f}, p-value = {pval:0.4f}')
