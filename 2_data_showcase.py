@@ -2,7 +2,7 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from plot_utils import divergent_green_orange
+from plot_utils import divergent_green_yellow_orange
 
 savefig = False
 
@@ -57,14 +57,14 @@ network_genes = network_genes.loc[~network_genes.index.str.contains('R')]
 
 # define order of networks
 network_order = [f'L_{ctx_net}' for ctx_net in ['Vis', 'SomMot', 'DorsAttn', 'SalVentAttn', 'Cont', 'Default', 'Limbic' ]] + \
-                [f'L_{sbctx_net}' for sbctx_net in ['amygdala', 'caudate', 'globus-pallidus', 'hippocampus', 'nucleus-accumbens', 'putamen', 'thalamus']] + \
-                ['B_hypothalamus']
+                ['B_hypothalamus'] + \
+                [f'L_{sbctx_net}' for sbctx_net in ['amygdala', 'caudate', 'globus-pallidus', 'hippocampus', 'nucleus-accumbens', 'putamen', 'thalamus']]
 
 # reorder data and transpose to have genes as rows
 network_genes = network_genes.loc[network_order].T
 
 # plot clustermap and have the dendrogram on the same side of the xticks
-clustermap = sns.clustermap(network_genes, cmap=divergent_green_orange(), col_cluster=False, row_cluster=True, 
+clustermap = sns.clustermap(network_genes, cmap=divergent_green_yellow_orange(), col_cluster=False, row_cluster=True, 
                             xticklabels=True, yticklabels=True, cbar_pos=None, figsize=(5, 11), 
                             linewidths=0.01, linecolor='white')
 clustermap.figure.set_dpi(200)
@@ -87,7 +87,7 @@ for i, label in enumerate(clustermap.ax_heatmap.get_yticklabels()):
         label.set_color(family_color_map[family])
  
 if savefig:
-    plt.savefig('./figs/genes_network_clustermap.pdf')
+    plt.savefig('./figs/genes_network_clustermap_review.pdf')
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -113,7 +113,7 @@ hth_df = plot_df[plot_df['structure'] == 'hypothalamus']
 plot_df = plot_df[plot_df['structure'] != 'hypothalamus']
 
 # define colormap
-green, orange = [color for i, color in enumerate(divergent_green_orange(n_colors=9, return_palette=True)) if i in [2, 4]]
+green, orange = [color for i, color in enumerate(divergent_green_yellow_orange(n_colors=9, return_palette=True)) if i in [2, 4]]
 yellow = sns.color_palette('Spectral')[2]
 orange, yellow, green = [color for i, color in enumerate(sns.color_palette('Spectral')) if i in [1,2,4]]
 
