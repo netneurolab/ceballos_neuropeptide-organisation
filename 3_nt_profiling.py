@@ -18,7 +18,7 @@ savefig = False
 receptor_genes = pd.read_csv('data/receptor_gene_expression_Schaefer2018_400_7N_Tian_Subcortex_S4.csv', index_col=0).iloc[:-1]
 
 # load receptor names from data/annotations
-nt_densities = pd.read_csv('data/annotations/nt_receptor_densities_Schaefer400_TianS4_HTH.csv', index_col=0)
+nt_densities = pd.read_csv('data/annotations/nt_receptor_densities_Schaefer400_TianS4.csv', index_col=0)
 
 # Load colors
 palette = divergent_green_orange(n_colors=9, return_palette=True)
@@ -190,10 +190,11 @@ r, p_gene = compare_images(kappa_gene, kappa_pet, metric='spearmanr', nulls=kapp
 
 # comparison plot
 plt.figure(figsize=(5, 5))
-sns.regplot(x=kappa_gene, y=kappa_pet, color='grey', ci=None)
+sns.regplot(x=kappa_pet, y=kappa_gene, color='grey', ci=None)
 plt.title(f'r={r:.2f}\n P$_{{SMASH}}$={p_pet:.4f} | P$_{{gene}}$={p_gene:.4f}')
 sns.despine()
-plt.savefig('figs/kappa_opioid_receptor_comparison.pdf')
+if savefig:
+    plt.savefig('figs/kappa_opioid_receptor_comparison.pdf')
 
 # correlate gene and PET map for mu-opioid receptor
 # load maps
@@ -211,9 +212,9 @@ r, p_gene = compare_images(mu_gene, mu_pet, metric='spearmanr', nulls=mu_gene_nu
 
 # comparison plot
 plt.figure(figsize=(5, 5))
-sns.regplot(x=mu_gene, y=mu_pet, color='grey', ci=None)
+sns.regplot(x=mu_pet, y=mu_gene, color='grey', ci=None)
 plt.title(f'r={r:.2f}\n P$_{{SMASH}}$={p_pet:.4f} | P$_{{gene}}$={p_gene:.4f}')
-plt.xlim(0,1)
+plt.ylim(0,1)
 sns.despine()
 
 if savefig:
