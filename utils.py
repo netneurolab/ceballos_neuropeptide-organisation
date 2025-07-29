@@ -447,3 +447,127 @@ def reorder_subcortex(gene_df, type='freesurfer', region_info=None):
     # concatenate subcortex and cortex
     gene_df = pd.concat([sbctx_genes, ctx_genes])
     return gene_df
+
+def linear_fit(X, y):
+    """
+    Computes the adjusted R2 of a linear regression model.
+    Parameters
+    ----------
+    X : np.ndarray
+        Independent variable (predictor) matrix.
+    y : np.ndarray
+        Dependent variable (response) vector.
+    Returns
+    -------
+    adjusted_r_squared : float
+        Adjusted R2 value of the linear regression model.
+    """
+    
+    reg = LinearRegression(fit_intercept=True)
+    reg_res = reg.fit(X, y)
+    yhat = reg.predict(X)
+
+    SS_Residual = np.sum((y - yhat) ** 2)
+    SS_Total = np.sum((y - np.mean(y)) ** 2)
+    r_squared = 1 - (SS_Residual / SS_Total)
+
+    num = (1 - r_squared) * (len(y) - 1)
+    denom = len(y) - X.shape[1] - 1
+
+    adjusted_r_squared = 1 - (num / denom)
+    return adjusted_r_squared
+
+def fit_to_connectivity(peptide, receptor, sc, dist_mat, y):
+    """
+    Computes the structure-function coupling for a given peptide and receptor pair.
+    Parameters
+    ----------
+    peptide : np.ndarray
+        Regional estimates of peptide ligand.
+    receptor : np.ndarray
+        Regional estimates of peptide receptor.
+    sc : np.ndarray
+        Structural connectivity matrix.
+    dist_mat : np.ndarray
+        Distance matrix.
+    y : np.ndarray
+        Non-diagonal elements of the functional connectivity matrix.
+    Returns
+    -------
+    r2 : float
+        Goodness of fit (adjusted R2) of peptide-receptor pair to functional connectivity.
+    """
+    
+    if peptide.ndim == 1:
+        peptide = peptide[:, np.newaxis]
+    if receptor.ndim == 1:
+        receptor = receptor[:, np.newaxis]
+    
+    # make sure the distribution is positive
+    peptide = peptide - np.min(peptide) + 1e-10
+    receptor = receptor - np.min(receptor) + 1e-10
+    
+    mat = peptide @ receptor.T
+    s = sc * mat
+    s_neglog = np.log1p(s / (np.max(s) + 1))
+    pep_comm = communication_measures(s, s_neglog, dist_mat)
+
+    X = zscore(pep_comm, ddof=1, axis=1).T
+    r2 = linear_fit(X, y)
+    return r2
+
+def scaled_robust_sigmoid(x):
+    """
+    Apply Scaled Robust Sigmoid normalization to a 1D numpy array.
+    
+    Parameters:
+    x : np.ndarray or list
+        Input array to be normalized.
+
+    Returns:
+    ----
+    normalized: np.ndarray
+        Normalized array with values between 0 and 1.
+    """
+    x = np.asarray(x, dtype=np.float64)
+    median = np.median(x)
+    iqr = np.subtract(*np.percentile(x, [75, 25]))
+    
+    if iqr == 0:
+        raise ValueError("IQR is zero. SRS normalization cannot be applied.")
+
+    # Step 1: Robust sigmoid transformation
+    transformed = 1 / (1 + np.exp(-(x - median) / (iqr / 1.35)))
+
+    # Step 2: Min-max scaling to [0, 1]
+    min_val = np.min(transformed)
+    max_val = np.max(transformed)
+    if max_val == min_val:
+        return np.zeros_like(transformed)  # or np.ones_like(transformed), depending on context
+    normalized = (transformed - min_val) / (max_val - min_val)
+    
+    return normalized
+
+
+def compute_dfc_var(time_series, window_size=60, step_size=30):
+    """
+    Compute variability of dynamic FC (sliding window FC) within a session.
+
+    Parameters:
+    - time_series: np.ndarray of shape (T, R), time series per region
+    - window_size: int, number of time points in the sliding window
+    - step_size: int, how much the window moves at each step
+
+    Returns:
+    - dFC_var: np.ndarray of shape (R, R), variance of dynamic FC
+    """
+    T, R = time_series.shape
+    all_dFC = []
+    for start in range(0, T - window_size + 1, step_size):
+        window = time_series[start:start + window_size]
+        window = zscore(window, axis=0)  # Normalize each region
+        dFC = np.corrcoef(window, rowvar=False)
+        all_dFC.append(dFC)
+    dFC_var = np.stack(all_dFC).var(axis=0)
+    
+    return dFC_var
